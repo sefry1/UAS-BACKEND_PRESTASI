@@ -7,8 +7,10 @@ import (
 )
 
 var userRepo = repository.NewUserRepository()
-var roleRepo = repository.NewRoleRepository()
 
+// =====================================================
+// LIST USERS
+// =====================================================
 func UserList(c *fiber.Ctx) error {
 	data, err := userRepo.FindAll()
 	if err != nil {
@@ -17,6 +19,9 @@ func UserList(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
+// =====================================================
+// USER DETAIL
+// =====================================================
 func UserDetail(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -28,6 +33,9 @@ func UserDetail(c *fiber.Ctx) error {
 	return c.JSON(data)
 }
 
+// =====================================================
+// CREATE USER
+// =====================================================
 func UserCreate(c *fiber.Ctx) error {
 	var req struct {
 		Username string `json:"username"`
@@ -49,6 +57,9 @@ func UserCreate(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User created"})
 }
 
+// =====================================================
+// UPDATE USER
+// =====================================================
 func UserUpdate(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -70,6 +81,9 @@ func UserUpdate(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User updated"})
 }
 
+// =====================================================
+// DELETE USER
+// =====================================================
 func UserDelete(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -81,6 +95,9 @@ func UserDelete(c *fiber.Ctx) error {
 	return c.JSON(fiber.Map{"message": "User deleted"})
 }
 
+// =====================================================
+// UPDATE USER ROLE
+// =====================================================
 func UserUpdateRole(c *fiber.Ctx) error {
 	id := c.Params("id")
 
@@ -88,7 +105,9 @@ func UserUpdateRole(c *fiber.Ctx) error {
 		RoleID string `json:"role_id"`
 	}
 
-	c.BodyParser(&req)
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
 
 	err := userRepo.UpdateRole(id, req.RoleID)
 	if err != nil {

@@ -1,12 +1,11 @@
 package route
 
 import (
-    "prestasi_backend/middleware"
     "prestasi_backend/app/service"
+    "prestasi_backend/middleware"
 
     "github.com/gofiber/fiber/v2"
 )
-
 
 func SetupRoutes(app *fiber.App) {
 
@@ -24,7 +23,7 @@ func SetupRoutes(app *fiber.App) {
     // 5.2 USERS (Admin Only)
     // ============================================
     users := api.Group("/users", middleware.JWTRequired())
-
+    
     users.Get("/", middleware.PermissionRequired("user:manage"), service.UserList)
     users.Get("/:id", middleware.PermissionRequired("user:manage"), service.UserDetail)
     users.Post("/", middleware.PermissionRequired("user:manage"), service.UserCreate)
@@ -62,7 +61,7 @@ func SetupRoutes(app *fiber.App) {
     students.Put("/:id/advisor", middleware.PermissionRequired("user:manage"), service.StudentSetAdvisor)
 
     // ============================================
-    // 5.6 LECTURERS
+    // 5.6 LECTURERS  ✔✔✔ SUDAH FIX
     // ============================================
     lect := api.Group("/lecturers", middleware.JWTRequired())
 

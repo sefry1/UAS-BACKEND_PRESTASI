@@ -15,7 +15,7 @@ func NewRoleRepository() *RoleRepository {
 }
 
 func (r *RoleRepository) FindAll() ([]model.Role, error) {
-	rows, err := r.DB.Query(`SELECT id, name FROM roles ORDER BY created_at`)
+	rows, err := r.DB.Query(`SELECT id, name, description, created_at FROM roles ORDER BY created_at`)
 	if err != nil {
 		return nil, err
 	}
@@ -24,19 +24,20 @@ func (r *RoleRepository) FindAll() ([]model.Role, error) {
 	var list []model.Role
 	for rows.Next() {
 		var x model.Role
-		rows.Scan(&x.ID, &x.Name)
+		rows.Scan(&x.ID, &x.Name, &x.Description, &x.CreatedAt)
 		list = append(list, x)
 	}
 	return list, nil
 }
 
 func (r *RoleRepository) FindByID(id string) (*model.Role, error) {
-	row := r.DB.QueryRow(`SELECT id, name FROM roles WHERE id=$1`, id)
+	row := r.DB.QueryRow(`SELECT id, name, description, created_at FROM roles WHERE id=$1`, id)
 
 	var x model.Role
-	err := row.Scan(&x.ID, &x.Name)
+	err := row.Scan(&x.ID, &x.Name, &x.Description, &x.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
+
 	return &x, nil
 }

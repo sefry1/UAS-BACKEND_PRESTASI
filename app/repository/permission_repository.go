@@ -16,7 +16,8 @@ func NewPermissionRepository() *PermissionRepository {
 
 func (r *PermissionRepository) GetAll() ([]model.Permission, error) {
 	rows, err := r.DB.Query(`
-        SELECT id, name, resource, action, description FROM permissions`)
+        SELECT id, name, resource, action, description, created_at
+        FROM permissions`)
 	if err != nil {
 		return nil, err
 	}
@@ -25,7 +26,7 @@ func (r *PermissionRepository) GetAll() ([]model.Permission, error) {
 	var list []model.Permission
 	for rows.Next() {
 		var p model.Permission
-		rows.Scan(&p.ID, &p.Name, &p.Resource, &p.Action, &p.Description)
+		rows.Scan(&p.ID, &p.Name, &p.Resource, &p.Action, &p.Description, &p.CreatedAt)
 		list = append(list, p)
 	}
 	return list, nil

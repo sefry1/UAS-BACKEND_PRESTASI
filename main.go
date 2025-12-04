@@ -5,37 +5,36 @@ import (
 
 	"prestasi_backend/app/config"
 	"prestasi_backend/app/database"
+	"prestasi_backend/app/route"
+	"prestasi_backend/app/service"
 
 	"github.com/gofiber/fiber/v2"
 )
 
 func main() {
-	// 1. Load Environment
+
 	config.LoadEnv()
 
-	// 2. Connect PostgreSQL
-	postgresDB, err := database.ConnectPostgre()
+	// Connect PostgreSQL
+	pg, err := database.ConnectPostgre()
 	if err != nil {
 		log.Fatal(err)
 	}
-	database.PostgresDB = postgresDB
+	database.PostgresDB = pg
 
-	// 3. Connect MongoDB
-	mongoDB, err := database.ConnectMongo()
+	// Connect MongoDB
+	mongo, err := database.ConnectMongo()
 	if err != nil {
 		log.Fatal(err)
 	}
-	database.MongoDB = mongoDB
+	database.MongoDB = mongo
 
-	// Start Fiber server
+	// 🔥 PENTING — Inisialisasi semua repository
+	service.InitService()
+
+	// Start Fiber
 	app := fiber.New()
-
-	app.Get("/", func(c *fiber.Ctx) error {
-		return c.JSON(fiber.Map{
-			"status":  "ok",
-			"message": "API Ready!",
-		})
-	})
+	route.SetupRoutes(app)
 
 	port := config.Get("APP_PORT")
 	log.Println("🚀 Server running on port", port)

@@ -1,7 +1,17 @@
 package service
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"prestasi_backend/app/repository"
+
+	"github.com/gofiber/fiber/v2"
+)
+
+var permRepo = repository.NewPermissionRepository()
 
 func PermissionList(c *fiber.Ctx) error {
-	return c.JSON(fiber.Map{"message": "permission list"})
+	data, err := permRepo.GetAll()
+	if err != nil {
+		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
+	}
+	return c.JSON(data)
 }
