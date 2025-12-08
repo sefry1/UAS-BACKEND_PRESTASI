@@ -1,19 +1,14 @@
 package service
 
 import (
-	"prestasi_backend/app/repository"
-
 	"github.com/gofiber/fiber/v2"
 )
-
-var studentRepo = repository.NewStudentRepository()
-var achievementRefRepo = repository.NewAchievementReferenceRepository()
 
 // =============================
 // LIST STUDENTS
 // =============================
 func StudentList(c *fiber.Ctx) error {
-	data, err := studentRepo.FindAll()
+	data, err := StudentRepo.FindAll()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -26,7 +21,7 @@ func StudentList(c *fiber.Ctx) error {
 func StudentDetail(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	data, err := studentRepo.FindByID(id)
+	data, err := StudentRepo.FindByID(id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "Student not found"})
 	}
@@ -39,7 +34,7 @@ func StudentDetail(c *fiber.Ctx) error {
 func StudentAchievements(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	data, err := achievementRefRepo.FindByStudentID(id)
+	data, err := AchievementRefRepo.FindByStudentID(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -61,7 +56,7 @@ func StudentSetAdvisor(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	if err := studentRepo.UpdateAdvisor(id, req.AdvisorID); err != nil {
+	if err := StudentRepo.UpdateAdvisor(id, req.AdvisorID); err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
 

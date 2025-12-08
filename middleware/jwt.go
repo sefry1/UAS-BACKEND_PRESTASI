@@ -35,7 +35,7 @@ func JWTRequired() fiber.Handler {
 		// CLAIMS
 		claims := token.Claims.(jwt.MapClaims)
 
-		c.Locals("user_id", claims["id"])
+		c.Locals("user_id", claims["user_id"])
 		c.Locals("role_id", claims["role_id"])
 		c.Locals("permissions", claims["permissions"])
 

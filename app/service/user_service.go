@@ -1,18 +1,14 @@
 package service
 
 import (
-	"prestasi_backend/app/repository"
-
 	"github.com/gofiber/fiber/v2"
 )
-
-var userRepo = repository.NewUserRepository()
 
 // =====================================================
 // LIST USERS
 // =====================================================
 func UserList(c *fiber.Ctx) error {
-	data, err := userRepo.FindAll()
+	data, err := UserRepo.FindAll()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -25,7 +21,7 @@ func UserList(c *fiber.Ctx) error {
 func UserDetail(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	data, err := userRepo.FindByID(id)
+	data, err := UserRepo.FindByID(id)
 	if err != nil {
 		return c.Status(404).JSON(fiber.Map{"error": "User not found"})
 	}
@@ -49,7 +45,7 @@ func UserCreate(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	err := userRepo.Create(req.Username, req.Email, req.Password, req.FullName, req.RoleID)
+	err := UserRepo.Create(req.Username, req.Email, req.Password, req.FullName, req.RoleID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -73,7 +69,7 @@ func UserUpdate(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	err := userRepo.Update(id, req.Email, req.FullName, req.RoleID)
+	err := UserRepo.Update(id, req.Email, req.FullName, req.RoleID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -87,7 +83,7 @@ func UserUpdate(c *fiber.Ctx) error {
 func UserDelete(c *fiber.Ctx) error {
 	id := c.Params("id")
 
-	err := userRepo.Delete(id)
+	err := UserRepo.Delete(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -109,7 +105,7 @@ func UserUpdateRole(c *fiber.Ctx) error {
 		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
 	}
 
-	err := userRepo.UpdateRole(id, req.RoleID)
+	err := UserRepo.UpdateRole(id, req.RoleID)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

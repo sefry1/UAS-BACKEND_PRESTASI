@@ -1,18 +1,13 @@
 package service
 
 import (
-    "os"
-    "time"
-    "prestasi_backend/app/repository"
+	"os"
+	"time"
 
-    "github.com/gofiber/fiber/v2"
-    "github.com/golang-jwt/jwt/v5"
-    "golang.org/x/crypto/bcrypt"
+	"github.com/gofiber/fiber/v2"
+	"github.com/golang-jwt/jwt/v5"
+	"golang.org/x/crypto/bcrypt"
 )
-
-// Repositories dipanggil dari sini agar tidak nil
-var authUserRepo = repository.NewUserRepository()
-var authRolePermRepo = repository.NewRolePermissionRepository()
 
 // Generate JWT Token
 func generateToken(userID string, roleID string, permissions []string) (string, error) {
@@ -29,26 +24,26 @@ func generateToken(userID string, roleID string, permissions []string) (string, 
 
 // LOGIN API
 func AuthLogin(c *fiber.Ctx) error {
-    var req struct {
-        Username string `json:"username"`
-        Password string `json:"password"`
-    }
+	var req struct {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
 
-    if err := c.BodyParser(&req); err != nil {
-        return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
-    }
+	if err := c.BodyParser(&req); err != nil {
+		return c.Status(400).JSON(fiber.Map{"error": "Invalid input"})
+	}
 
-    user, err := authUserRepo.FindByUsername(req.Username)
-    if err != nil {
-        return c.Status(401).JSON(fiber.Map{"error": "Invalid username or password"})
-    }
+	user, err := UserRepo.FindByUsername(req.Username)
+	if err != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid username or password"})
+	}
 
-    // Password check
-    if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
-        return c.Status(401).JSON(fiber.Map{"error": "Invalid username or password"})
-    }
+	// Password check
+	if bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)) != nil {
+		return c.Status(401).JSON(fiber.Map{"error": "Invalid username or password"})
+	}
 
-    permissions, _ := authRolePermRepo.GetPermissions(user.RoleID)
+	permissions, _ := RolePermissionRepo.GetPermissions(user.RoleID)
 
     token, err := generateToken(user.ID, user.RoleID, permissions)
     if err != nil {

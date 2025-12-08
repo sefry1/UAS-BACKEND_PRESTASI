@@ -13,13 +13,9 @@ func NewRolePermissionRepository() *RolePermissionRepository {
 	return &RolePermissionRepository{DB: database.PostgresDB}
 }
 
+// GetPermissions - Get all permissions for a role using stored procedure
 func (r *RolePermissionRepository) GetPermissions(roleID string) ([]string, error) {
-	rows, err := r.DB.Query(`
-        SELECT p.name 
-        FROM role_permissions rp
-        JOIN permissions p ON rp.permission_id = p.id
-        WHERE rp.role_id=$1
-    `, roleID)
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_role_permissions($1)`, roleID)
 
 	if err != nil {
 		return nil, err
@@ -29,9 +25,22 @@ func (r *RolePermissionRepository) GetPermissions(roleID string) ([]string, erro
 	var list []string
 	for rows.Next() {
 		var perm string
-		rows.Scan(&perm)
+		err := rows.Scan(&perm)
+		if err != nil {
+			return nil, err
+		}
 		list = append(list, perm)
 	}
 
 	return list, nil
+}
+
+// HasPermission - Check if user has specific permission using stored procedure
+func (r *RolePermissionRepository) HasPermission(userID, permission string) (bool, error) {
+	var hasPermission bool
+	err := r.DB.QueryRow(`SELECT sp_user_has_permission($1, $2)`, userID, permission).Scan(&hasPermission)
+	if err != nil {
+		return false, err
+	}
+	return hasPermission, nil
 }

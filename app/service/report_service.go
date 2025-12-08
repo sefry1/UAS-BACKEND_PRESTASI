@@ -1,18 +1,14 @@
 package service
 
 import (
-	"prestasi_backend/app/repository"
 	"github.com/gofiber/fiber/v2"
 )
-
-var reportRefRepo = repository.NewAchievementReferenceRepository()
-var reportStudentRepo = repository.NewStudentRepository()
 
 // ==========================================
 // REPORT STATISTICS
 // ==========================================
 func ReportStatistics(c *fiber.Ctx) error {
-	all, err := reportRefRepo.FindAll()
+	all, err := AchievementRefRepo.FindAll()
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}
@@ -38,7 +34,7 @@ func ReportStudent(c *fiber.Ctx) error {
 	id := c.Params("id")
 
 	// ✅ FIX: gunakan FindByStudentID (method yang benar)
-	achievements, err := reportRefRepo.FindByStudentID(id)
+	achievements, err := AchievementRefRepo.FindByStudentID(id)
 	if err != nil {
 		return c.Status(500).JSON(fiber.Map{"error": err.Error()})
 	}

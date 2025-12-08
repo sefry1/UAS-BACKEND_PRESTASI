@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"prestasi_backend/app/database"
 	"prestasi_backend/app/model"
-	"time"
 )
 
 type AchievementReferenceRepository struct {
@@ -23,13 +22,7 @@ func NewAchievementReferenceRepository() *AchievementReferenceRepository {
 // ========================================================
 func (r *AchievementReferenceRepository) FindAll() ([]model.AchievementReference, error) {
 
-	rows, err := r.DB.Query(`
-        SELECT id, student_id, mongo_achievement_id, status,
-               submitted_at, verified_at, verified_by,
-               rejection_note, created_at, updated_at
-        FROM achievement_references
-        ORDER BY created_at DESC
-    `)
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_all_achievements()`)
 	if err != nil {
 		return nil, err
 	}
@@ -39,10 +32,10 @@ func (r *AchievementReferenceRepository) FindAll() ([]model.AchievementReference
 
 	for rows.Next() {
 		var a model.AchievementReference
+		var studentName string
 		err := rows.Scan(
-			&a.ID, &a.StudentID, &a.MongoAchievementID, &a.Status,
-			&a.SubmittedAt, &a.VerifiedAt, &a.VerifiedBy,
-			&a.RejectionNote, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.StudentID, &studentName, &a.MongoAchievementID, &a.Status,
+			&a.SubmittedAt, &a.VerifiedAt, &a.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -59,19 +52,14 @@ func (r *AchievementReferenceRepository) FindAll() ([]model.AchievementReference
 // ========================================================
 func (r *AchievementReferenceRepository) FindByID(id string) (*model.AchievementReference, error) {
 
-	row := r.DB.QueryRow(`
-        SELECT id, student_id, mongo_achievement_id, status,
-               submitted_at, verified_at, verified_by,
-               rejection_note, created_at, updated_at
-        FROM achievement_references
-        WHERE id = $1
-    `, id)
+	row := r.DB.QueryRow(`SELECT * FROM sp_get_achievement_by_id($1)`, id)
 
 	var a model.AchievementReference
+	var verifiedByName sql.NullString
 	err := row.Scan(
 		&a.ID, &a.StudentID, &a.MongoAchievementID, &a.Status,
 		&a.SubmittedAt, &a.VerifiedAt, &a.VerifiedBy,
-		&a.RejectionNote, &a.CreatedAt, &a.UpdatedAt,
+		&verifiedByName, &a.RejectionNote, &a.CreatedAt, &a.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -86,15 +74,14 @@ func (r *AchievementReferenceRepository) FindByID(id string) (*model.Achievement
 // ========================================================
 func (r *AchievementReferenceRepository) FindByUserID(userID string) ([]model.AchievementReference, error) {
 
-	rows, err := r.DB.Query(`
-        SELECT ar.id, ar.student_id, ar.mongo_achievement_id, ar.status,
-               ar.submitted_at, ar.verified_at, ar.verified_by,
-               ar.rejection_note, ar.created_at, ar.updated_at
-        FROM achievement_references ar
-        JOIN students s ON ar.student_id = s.id
-        WHERE s.user_id = $1
-        ORDER BY ar.created_at DESC
-    `, userID)
+	// First, get student_id from user_id
+	var studentID string
+	err := r.DB.QueryRow(`SELECT id FROM students WHERE user_id = $1`, userID).Scan(&studentID)
+	if err != nil {
+		return nil, err
+	}
+
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_achievements_by_student($1)`, studentID)
 
 	if err != nil {
 		return nil, err
@@ -106,13 +93,13 @@ func (r *AchievementReferenceRepository) FindByUserID(userID string) ([]model.Ac
 	for rows.Next() {
 		var a model.AchievementReference
 		err := rows.Scan(
-			&a.ID, &a.StudentID, &a.MongoAchievementID, &a.Status,
-			&a.SubmittedAt, &a.VerifiedAt, &a.VerifiedBy,
-			&a.RejectionNote, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.MongoAchievementID, &a.Status,
+			&a.SubmittedAt, &a.VerifiedAt, &a.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+		a.StudentID = studentID
 		list = append(list, a)
 	}
 
@@ -125,14 +112,7 @@ func (r *AchievementReferenceRepository) FindByUserID(userID string) ([]model.Ac
 // ========================================================
 func (r *AchievementReferenceRepository) FindByStudentID(studentID string) ([]model.AchievementReference, error) {
 
-	rows, err := r.DB.Query(`
-        SELECT id, student_id, mongo_achievement_id, status,
-               submitted_at, verified_at, verified_by,
-               rejection_note, created_at, updated_at
-        FROM achievement_references
-        WHERE student_id = $1
-        ORDER BY created_at DESC
-    `, studentID)
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_achievements_by_student($1)`, studentID)
 
 	if err != nil {
 		return nil, err
@@ -144,9 +124,40 @@ func (r *AchievementReferenceRepository) FindByStudentID(studentID string) ([]mo
 	for rows.Next() {
 		var a model.AchievementReference
 		err := rows.Scan(
-			&a.ID, &a.StudentID, &a.MongoAchievementID, &a.Status,
-			&a.SubmittedAt, &a.VerifiedAt, &a.VerifiedBy,
-			&a.RejectionNote, &a.CreatedAt, &a.UpdatedAt,
+			&a.ID, &a.MongoAchievementID, &a.Status,
+			&a.SubmittedAt, &a.VerifiedAt, &a.CreatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		a.StudentID = studentID
+		list = append(list, a)
+	}
+
+	return list, nil
+}
+
+//
+// ========================================================
+// FIND BY ADVISOR (untuk dosen wali)
+// ========================================================
+func (r *AchievementReferenceRepository) FindByAdvisor(lecturerID string) ([]model.AchievementReference, error) {
+
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_achievements_by_advisor($1)`, lecturerID)
+
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var list []model.AchievementReference
+
+	for rows.Next() {
+		var a model.AchievementReference
+		var studentName string
+		err := rows.Scan(
+			&a.ID, &a.StudentID, &studentName, &a.MongoAchievementID,
+			&a.Status, &a.SubmittedAt, &a.CreatedAt,
 		)
 		if err != nil {
 			return nil, err
@@ -159,53 +170,82 @@ func (r *AchievementReferenceRepository) FindByStudentID(studentID string) ([]mo
 
 //
 // ========================================================
-// UPDATE STATUS (submit)
+// CREATE (dari mahasiswa create achievement)
 // ========================================================
-func (r *AchievementReferenceRepository) UpdateStatus(id, status string, submittedAt time.Time, reason *string) error {
+func (r *AchievementReferenceRepository) Create(studentID, mongoAchievementID string) (string, error) {
 
-	_, err := r.DB.Exec(`
-        UPDATE achievement_references
-        SET status=$1, submitted_at=$2, rejection_note=$3,
-            updated_at=NOW()
-        WHERE id=$4
-    `, status, submittedAt, reason, id)
+	var achievementID string
+	err := r.DB.QueryRow(`SELECT sp_create_achievement_reference($1, $2)`,
+		studentID, mongoAchievementID).Scan(&achievementID)
 
-	return err
+	if err != nil {
+		return "", err
+	}
+
+	return achievementID, nil
 }
 
 //
 // ========================================================
-// VERIFY
+// SUBMIT (mahasiswa submit for verification)
+// ========================================================
+func (r *AchievementReferenceRepository) Submit(id string) error {
+
+	var success bool
+	err := r.DB.QueryRow(`SELECT sp_submit_achievement($1)`, id).Scan(&success)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//
+// ========================================================
+// VERIFY (dosen wali verify)
 // ========================================================
 func (r *AchievementReferenceRepository) Verify(id, verifier string) error {
 
-	_, err := r.DB.Exec(`
-        UPDATE achievement_references
-        SET status='approved',
-            verified_at=NOW(),
-            verified_by=$1,
-            updated_at=NOW()
-        WHERE id=$2
-    `, verifier, id)
+	var success bool
+	err := r.DB.QueryRow(`SELECT sp_verify_achievement($1, $2)`, id, verifier).Scan(&success)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 //
 // ========================================================
-// REJECT
+// REJECT (dosen wali reject)
 // ========================================================
 func (r *AchievementReferenceRepository) Reject(id, verifier, note string) error {
 
-	_, err := r.DB.Exec(`
-        UPDATE achievement_references
-        SET status='rejected',
-            verified_by=$1,
-            rejection_note=$2,
-            verified_at=NOW(),
-            updated_at=NOW()
-        WHERE id=$3
-    `, verifier, note, id)
+	var success bool
+	err := r.DB.QueryRow(`SELECT sp_reject_achievement($1, $2, $3)`,
+		id, verifier, note).Scan(&success)
 
-	return err
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+//
+// ========================================================
+// DELETE (only draft)
+// ========================================================
+func (r *AchievementReferenceRepository) Delete(id string) error {
+
+	var success bool
+	err := r.DB.QueryRow(`SELECT sp_delete_achievement($1)`, id).Scan(&success)
+
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

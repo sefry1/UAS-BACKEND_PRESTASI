@@ -17,9 +17,7 @@ func NewUserRepository() *UserRepository {
 }
 
 func (r *UserRepository) FindAll() ([]model.User, error) {
-	rows, err := r.DB.Query(`
-        SELECT id, username, email, full_name, role_id, is_active, created_at, updated_at 
-        FROM users ORDER BY created_at DESC`)
+	rows, err := r.DB.Query(`SELECT * FROM sp_get_all_users()`)
 	if err != nil {
 		return nil, err
 	}
@@ -29,11 +27,13 @@ func (r *UserRepository) FindAll() ([]model.User, error) {
 
 	for rows.Next() {
 		var u model.User
+		var roleName string
 		err := rows.Scan(&u.ID, &u.Username, &u.Email, &u.FullName, &u.RoleID,
-			&u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+			&roleName, &u.IsActive, &u.CreatedAt)
 		if err != nil {
 			return nil, err
 		}
+		u.Role = &model.Role{Name: roleName}
 		result = append(result, u)
 	}
 
@@ -41,24 +41,22 @@ func (r *UserRepository) FindAll() ([]model.User, error) {
 }
 
 func (r *UserRepository) FindByID(id string) (*model.User, error) {
-	row := r.DB.QueryRow(`
-        SELECT id, username, email, full_name, role_id, is_active, created_at, updated_at
-        FROM users WHERE id=$1`, id)
+	row := r.DB.QueryRow(`SELECT * FROM sp_get_user_by_id($1)`, id)
 
 	var u model.User
+	var roleName string
 	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.FullName,
-		&u.RoleID, &u.IsActive, &u.CreatedAt, &u.UpdatedAt)
+		&u.RoleID, &roleName, &u.IsActive, &u.CreatedAt)
 	if err != nil {
 		return nil, err
 	}
 
+	u.Role = &model.Role{Name: roleName}
 	return &u, nil
 }
 
 func (r *UserRepository) FindByUsername(username string) (*model.User, error) {
-	row := r.DB.QueryRow(`
-        SELECT id, username, email, password_hash, full_name, role_id, is_active, created_at, updated_at
-        FROM users WHERE username=$1`, username)
+	row := r.DB.QueryRow(`SELECT * FROM sp_get_user_by_username($1)`, username)
 
 	var u model.User
 	err := row.Scan(&u.ID, &u.Username, &u.Email, &u.PasswordHash,
@@ -72,29 +70,23 @@ func (r *UserRepository) FindByUsername(username string) (*model.User, error) {
 func (r *UserRepository) Create(username, email, password, fullName, roleID string) error {
 	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 
-	_, err := r.DB.Exec(`
-        INSERT INTO users (username, email, password_hash, full_name, role_id, created_at, updated_at)
-        VALUES ($1,$2,$3,$4,$5,NOW(),NOW())
-    `, username, email, string(hash), fullName, roleID)
+	_, err := r.DB.Exec(`SELECT sp_create_user($1,$2,$3,$4,$5)`,
+		username, email, string(hash), fullName, roleID)
 
 	return err
 }
 
 func (r *UserRepository) Update(id, email, fullName, roleID string) error {
-	_, err := r.DB.Exec(`
-        UPDATE users 
-        SET email=$1, full_name=$2, role_id=$3, updated_at=NOW()
-        WHERE id=$4
-    `, email, fullName, roleID, id)
+	_, err := r.DB.Exec(`SELECT sp_update_user($1,$2,$3)`, id, email, fullName)
 	return err
 }
 
 func (r *UserRepository) Delete(id string) error {
-	_, err := r.DB.Exec(`DELETE FROM users WHERE id=$1`, id)
+	_, err := r.DB.Exec(`SELECT sp_delete_user($1)`, id)
 	return err
 }
 
 func (r *UserRepository) UpdateRole(id, roleID string) error {
-	_, err := r.DB.Exec(`UPDATE users SET role_id=$1 WHERE id=$2`, roleID, id)
+	_, err := r.DB.Exec(`SELECT sp_update_user_role($1,$2)`, id, roleID)
 	return err
 }
